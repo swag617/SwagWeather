@@ -9,6 +9,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout plugin repo (full history for diffing)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed to diff between tags
+
       - name: Get release info
         run: |
           echo "TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
@@ -16,7 +21,6 @@ jobs:
 
       - name: Download release jar
         run: |
-          # Get asset ID from the release assets (more reliable than browser_download_url for private repos)
           ASSET_ID=$(echo '${{ toJson(github.event.release.assets) }}' \
             | jq -r '.[] | select(.name | endswith(".jar")) | .id' | head -1)
 
@@ -45,6 +49,81 @@ jobs:
           echo "CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
           echo "Checksum: $CHECKSUM"
 
+      - name: Generate player-friendly changelog from git diff
+        run: |
+          echo "Generating diff-based changelog for $PLUGIN $TAG..."
+
+          # Get all tags sorted by version, find the one before this release
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^$TAG$" | head -1)
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found — this appears to be the first release."
+            # Diff against the very first commit instead
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+            echo "Using first commit as base: $PREV_TAG"
+          else
+            echo "Previous tag: $PREV_TAG"
+          fi
+
+          echo "Diffing $PREV_TAG → $TAG"
+
+          # Get the diff of Java source files only — skip resources, yamls, etc.
+          # Limit to 6000 chars to stay within API token limits
+          DIFF=$(git diff "$PREV_TAG" "$TAG" -- '*.java' | head -c 6000)
+
+          # Also get a file-level summary (which files changed) as context
+          FILE_SUMMARY=$(git diff --stat "$PREV_TAG" "$TAG" -- '*.java' | tail -20)
+
+          echo "Files changed:"
+          echo "$FILE_SUMMARY"
+
+          if [ -z "$DIFF" ]; then
+            echo "No Java source changes detected — using fallback summary."
+            SUMMARY="✨ **$PLUGIN** has been updated with improvements and bug fixes. Log on to check it out!"
+            echo "CHANGELOG_SUMMARY<<EOF" >> $GITHUB_ENV
+            echo "$SUMMARY" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # Call Gemini with the actual code diff
+          RESPONSE=$(curl -s \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg plugin "$PLUGIN" \
+              --arg version "$TAG" \
+              --arg filesummary "$FILE_SUMMARY" \
+              --arg diff "$DIFF" \
+              '{
+                contents: [{
+                  parts: [{
+                    text: ("You are writing a changelog for a Minecraft server Discord called FleaMC. You will be given a git diff of Java source code changes between two versions of a Minecraft plugin. Your job is to figure out what changed from a PLAYER perspective and write a short, exciting, player-friendly announcement.\n\nRules:\n- Use plain language players understand — no Java, no class names, no technical terms\n- Use emojis\n- Maximum 8 bullet points\n- Focus on what players will actually notice or experience\n- Do not mention version numbers\n- End with one short hype line encouraging players to log on\n- If the changes are mostly bug fixes, say so in a fun way\n- If you cannot determine what changed from a player perspective, write a generic exciting update message\n\nPlugin: " + $plugin + " v" + $version + "\n\nFiles changed summary:\n" + $filesummary + "\n\nCode diff:\n" + $diff)
+                  }]
+                }],
+                generationConfig: {
+                  maxOutputTokens: 500,
+                  temperature: 0.7
+                }
+              }')")
+
+          echo "Gemini response:"
+          echo "$RESPONSE" | jq '.'
+
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // ""')
+
+          if [ -z "$SUMMARY" ] || [ "$SUMMARY" = "null" ]; then
+            echo "Gemini returned empty — using fallback."
+            SUMMARY="✨ **$PLUGIN** has been updated! Log on to check out what's new."
+          fi
+
+          echo "Generated summary:"
+          echo "$SUMMARY"
+
+          echo "CHANGELOG_SUMMARY<<EOF" >> $GITHUB_ENV
+          echo "$SUMMARY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Checkout swag-versions repo
         uses: actions/checkout@v4
         with:
@@ -56,10 +135,8 @@ jobs:
         run: |
           cd swag-versions
 
-          # Validate current versions.json is valid JSON before touching it
           jq empty versions.json || { echo "ERROR: versions.json is invalid JSON"; exit 1; }
 
-          # Update only this plugin's entry — all other entries untouched
           jq --arg plugin "$PLUGIN" \
              --arg version "$TAG" \
              --arg url "$JAR_URL" \
@@ -67,7 +144,6 @@ jobs:
              '.plugins[$plugin] = {version: $version, download: $url, checksum: $checksum}' \
              versions.json > versions.tmp.json
 
-          # Validate the output before replacing
           jq empty versions.tmp.json || { echo "ERROR: jq produced invalid JSON"; exit 1; }
 
           mv versions.tmp.json versions.json
@@ -75,15 +151,27 @@ jobs:
           echo "Updated $PLUGIN to $TAG"
           cat versions.json
 
-      - name: Commit and push
+      - name: Write changelog summary for Discord workflow
+        run: |
+          cd swag-versions
+
+          # Write the generated summary to a temp file that the discord workflow will read
+          # Named per-plugin so concurrent releases don't overwrite each other
+          mkdir -p changelogs
+          echo "$CHANGELOG_SUMMARY" > "changelogs/$PLUGIN.md"
+
+          echo "Wrote changelog to changelogs/$PLUGIN.md"
+          cat "changelogs/$PLUGIN.md"
+
+      - name: Commit and push to swag-versions
         run: |
           cd swag-versions
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add versions.json
+          git add versions.json "changelogs/$PLUGIN.md"
 
-          # Only commit if something actually changed
           git diff --staged --quiet && echo "No changes to commit" && exit 0
 
+          # Include plugin name in commit message so discord workflow can detect it
           git commit -m "chore: update $PLUGIN to $TAG"
           git push
