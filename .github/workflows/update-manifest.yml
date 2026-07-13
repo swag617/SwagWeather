@@ -1,0 +1,89 @@
+name: Update Version Manifest
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get release info
+        run: |
+          echo "TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          echo "PLUGIN=${{ github.event.repository.name }}" >> $GITHUB_ENV
+
+      - name: Download release jar
+        run: |
+          # Get asset ID from the release assets (more reliable than browser_download_url for private repos)
+          ASSET_ID=$(echo '${{ toJson(github.event.release.assets) }}' \
+            | jq -r '.[] | select(.name | endswith(".jar")) | .id' | head -1)
+
+          if [ -z "$ASSET_ID" ]; then
+            echo "ERROR: No .jar asset found in this release. Did you attach the jar?"
+            exit 1
+          fi
+
+          JAR_NAME=$(echo '${{ toJson(github.event.release.assets) }}' \
+            | jq -r '.[] | select(.name | endswith(".jar")) | .name' | head -1)
+
+          JAR_URL="https://api.github.com/repos/${{ github.repository }}/releases/assets/$ASSET_ID"
+          echo "JAR_URL=$JAR_URL" >> $GITHUB_ENV
+          echo "Downloading asset ID: $ASSET_ID ($JAR_NAME)"
+
+          curl -L -f -o plugin.jar \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/octet-stream" \
+            "$JAR_URL"
+
+          echo "Downloaded: $(ls -lh plugin.jar | awk '{print $5}')"
+
+      - name: Compute SHA-256 checksum
+        run: |
+          CHECKSUM=$(sha256sum plugin.jar | awk '{print $1}')
+          echo "CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
+          echo "Checksum: $CHECKSUM"
+
+      - name: Checkout swag-versions repo
+        uses: actions/checkout@v4
+        with:
+          repository: swag617/swag-versions
+          token: ${{ secrets.VERSIONS_REPO_TOKEN }}
+          path: swag-versions
+
+      - name: Update versions.json
+        run: |
+          cd swag-versions
+
+          # Validate current versions.json is valid JSON before touching it
+          jq empty versions.json || { echo "ERROR: versions.json is invalid JSON"; exit 1; }
+
+          # Update only this plugin's entry — all other entries untouched
+          jq --arg plugin "$PLUGIN" \
+             --arg version "$TAG" \
+             --arg url "$JAR_URL" \
+             --arg checksum "$CHECKSUM" \
+             '.plugins[$plugin] = {version: $version, download: $url, checksum: $checksum}' \
+             versions.json > versions.tmp.json
+
+          # Validate the output before replacing
+          jq empty versions.tmp.json || { echo "ERROR: jq produced invalid JSON"; exit 1; }
+
+          mv versions.tmp.json versions.json
+
+          echo "Updated $PLUGIN to $TAG"
+          cat versions.json
+
+      - name: Commit and push
+        run: |
+          cd swag-versions
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add versions.json
+
+          # Only commit if something actually changed
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+
+          git commit -m "chore: update $PLUGIN to $TAG"
+          git push
