@@ -1,0 +1,58 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+dependency-reduced-pom.xml
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### Windows ###
+Thumbs.db
+
+# Claude AI settings — personal/local, never commit
+.claude/
+
+# Internal planning docs — not for the public repo
+Gameplan/
+GAMEPLAN.md
+
+# Compiled classes and jars (built jars belong in GitHub Releases, not Git)
+*.class
+*.jar
+
+# Runtime files that may appear in project root by accident
+/config.yml
+/plugin.yml
+
+# systemPath dependency jars — intentionally committed (private repo, no shared Maven coordinate)
+!libs/*.jar

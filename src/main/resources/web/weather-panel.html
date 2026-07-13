@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwagWeather — Admin Panel</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #10141c;
+    --card:     #161c28;
+    --surface2: #1c2536;
+    --accent:   #3aa0ff;
+    --accent2:  #2c7fd1;
+    --text:     #e2e6ee;
+    --muted:    #7d8aa3;
+    --border:   #262f42;
+    --input:    #0d1220;
+    --success:  #3ddc84;
+    --danger:   #e94560;
+    --radius:   6px;
+    --font:     'Segoe UI', system-ui, sans-serif;
+  }
+
+  html { font-size: 15px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  header {
+    background: var(--card);
+    border-bottom: 2px solid var(--accent);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: .5px; }
+  header span.tag { color: var(--muted); font-size: .8rem; }
+  .header-actions { margin-left: auto; display: flex; gap: 8px; }
+  #refresh-status { color: var(--muted); font-size: .8rem; align-self: center; }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--surface2);
+    padding: 10px 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-body { padding: 16px; }
+
+  .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: .92rem; }
+  .stat-row .label { color: var(--muted); }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    background: var(--surface2);
+    color: var(--accent);
+  }
+  .pill.intensity-CLEAR       { color: #9fb0c9; }
+  .pill.intensity-LIGHT_RAIN  { color: #6bb8ff; }
+  .pill.intensity-RAIN        { color: #3aa0ff; }
+  .pill.intensity-HEAVY_RAIN  { color: #2c7fd1; }
+  .pill.intensity-THUNDERSTORM{ color: #e9c846; }
+
+  .forecast-list { list-style: none; margin-top: 8px; }
+  .forecast-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: .85rem;
+  }
+  .forecast-list li:last-child { border-bottom: none; }
+  .forecast-list .eta { color: var(--muted); }
+
+  .force-form { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .force-form .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  select, input[type=number] {
+    background: var(--input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: .85rem;
+    flex: 1;
+  }
+  button {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #08111d;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 700;
+    padding: 7px 12px;
+    transition: background .15s;
+  }
+  button:hover { background: var(--accent2); color: #fff; }
+  button.secondary { background: var(--surface2); color: var(--text); }
+  button.secondary:hover { background: var(--border); }
+
+  #empty-state { color: var(--muted); text-align: center; padding: 40px 0; }
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--success);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: .85rem;
+    display: none;
+  }
+  #toast.error { border-left-color: var(--danger); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌦 SwagWeather</h1>
+  <span class="tag">Admin Panel</span>
+  <div class="header-actions">
+    <button class="secondary" id="refresh-btn">Refresh</button>
+  </div>
+  <span id="refresh-status"></span>
+</header>
+
+<main>
+  <div id="empty-state" style="display:none;">No managed worlds found yet — the manager populates state on its first check interval.</div>
+  <div class="grid" id="world-grid"></div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const INTENSITIES = ["CLEAR", "LIGHT_RAIN", "RAIN", "HEAVY_RAIN", "THUNDERSTORM"];
+const SEASONS = ["SPRING", "SUMMER", "FALL", "WINTER"];
+
+function toast(message, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.className = isError ? 'error' : '';
+  el.style.display = 'block';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* no body */ }
+  if (!res.ok) {
+    throw new Error((body && body.error) ? body.error : ('HTTP ' + res.status));
+  }
+  return body;
+}
+
+function worldCard(w) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const forecastItems = (w.forecast || []).map(f =>
+    `<li><span>${f.intensity}</span><span class="eta">~${f.etaSeconds}s</span></li>`
+  ).join('');
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span>${w.world}</span>
+      <span class="pill intensity-${w.intensity}">${w.intensity}</span>
+    </div>
+    <div class="card-body">
+      <div class="stat-row"><span class="label">Season</span><span>${w.season}</span></div>
+      <div class="stat-row"><span class="label">Days remaining</span><span>${w.daysRemaining}</span></div>
+      <div class="stat-row"><span class="label">Forecast</span><span></span></div>
+      <ul class="forecast-list">${forecastItems || '<li><span class="eta">No forecast queued yet</span></li>'}</ul>
+
+      <div class="force-form">
+        <div class="row">
+          <select class="force-intensity">
+            ${INTENSITIES.map(i => `<option value="${i}">${i}</option>`).join('')}
+          </select>
+          <input type="number" class="force-duration" placeholder="Seconds" value="600" min="1">
+          <button class="force-btn">Force</button>
+        </div>
+        <div class="row">
+          <select class="force-season">
+            ${SEASONS.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+          <button class="season-btn secondary">Set Season</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  card.querySelector('.force-btn').addEventListener('click', async () => {
+    const intensity = card.querySelector('.force-intensity').value;
+    const durationSeconds = parseInt(card.querySelector('.force-duration').value, 10) || 600;
+    try {
+      await api('api/force', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world: w.world, intensity, durationSeconds })
+      });
+      toast(`Forced ${intensity} on ${w.world}`);
+      loadState();
+    } catch (e) {
+      toast('Force failed: ' + e.message, true);
+    }
+  });
+
+  card.querySelector('.season-btn').addEventListener('click', async () => {
+    const season = card.querySelector('.force-season').value;
+    try {
+      await api('api/season', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world: w.world, season })
+      });
+      toast(`Set season ${season} on ${w.world}`);
+      loadState();
+    } catch (e) {
+      toast('Season change failed: ' + e.message, true);
+    }
+  });
+
+  return card;
+}
+
+async function loadState() {
+  const status = document.getElementById('refresh-status');
+  status.textContent = 'Loading...';
+  try {
+    const worlds = await api('api/state');
+    const grid = document.getElementById('world-grid');
+    const empty = document.getElementById('empty-state');
+    grid.innerHTML = '';
+    if (!worlds || worlds.length === 0) {
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      worlds.forEach(w => grid.appendChild(worldCard(w)));
+    }
+    status.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    status.textContent = 'Failed to load state: ' + e.message;
+  }
+}
+
+document.getElementById('refresh-btn').addEventListener('click', loadState);
+loadState();
+setInterval(loadState, 15000);
+</script>
+</body>
+</html>

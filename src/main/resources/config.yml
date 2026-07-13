@@ -1,0 +1,48 @@
+# SwagWeather configuration
+
+# Worlds to manage. If enabled-worlds is non-empty, ONLY those worlds are managed.
+# Otherwise every world is managed except those listed in disabled-worlds.
+worlds:
+  enabled-worlds: []
+  disabled-worlds: []
+
+weather:
+  enabled: true
+
+  # How often (in seconds) the manager checks whether the next forecasted
+  # transition is due. Lower = more responsive, higher = less overhead.
+  check-interval-seconds: 30
+
+  # Number of upcoming transitions kept queued per world.
+  forecast-size: 5
+
+  # Random bounds (in minutes) for how long a given weather intensity lasts
+  # before the next forecasted transition takes effect.
+  min-transition-minutes: 10
+  max-transition-minutes: 30
+
+  # Relative weights used when randomly picking the next forecasted intensity.
+  # Higher weight = more likely. Does not need to sum to 100.
+  weights:
+    CLEAR: 40
+    LIGHT_RAIN: 25
+    RAIN: 20
+    HEAVY_RAIN: 10
+    THUNDERSTORM: 5
+
+season:
+  enabled: true
+
+  # How a season's length is measured:
+  #   real_seconds - length-value is real-world seconds
+  #   game_days    - length-value is in-game days (24000 ticks each)
+  length-mode: real_seconds
+
+  # Length of one season in the unit chosen above.
+  length-value: 1800
+
+  # Season order used when advancing (wraps back to the first entry).
+  order: [SPRING, SUMMER, FALL, WINTER]
+
+web:
+  enabled: true

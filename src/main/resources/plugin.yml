@@ -1,0 +1,15 @@
+name: SwagWeather
+version: '${project.version}'
+main: com.swag.weather.SwagWeather
+api-version: 1.21
+depend: [SwagAPI]
+commands:
+  sweather:
+    description: SwagWeather admin command
+    usage: /<command> <status|forecast|force|season|reload> [args]
+    aliases: [weather, sw]
+    permission: swagweather.admin
+permissions:
+  swagweather.admin:
+    description: Allows access to SwagWeather admin commands
+    default: op
