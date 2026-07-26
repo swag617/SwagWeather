@@ -56,7 +56,7 @@ rather than via a delayed task — worth confirming against SwagAPI's own audit 
 
 ## Pattern 3 — Per-world/per-item loops without isolation (MODULE-DEATH class)
 
-**Hits found:** 2, both bugs, both fixed.
+**Hits found:** 3, all fixed (1 was outside strict pattern scope, fixed on follow-up — see below).
 
 1. `WeatherManager.tick()` (`WeatherManager.java:128-143`) — loops `Bukkit.getWorlds()`
    and calls `world.setStorm()` / `setThundering()` / `setWeatherDuration()` /
@@ -82,13 +82,14 @@ continues to the next world. No behavior change for healthy worlds.
 world mocks in this repo; recommend a live-server check per the "Verify" step in the
 source pattern doc before the next server restart.
 
-**Related, NOT fixed (flagged for review):** `WeatherWebHttpHandler.buildStateJson()`
-(`WeatherWebHttpHandler.java:168-191`) has the identical shape — loops
+**Related, also fixed:** `WeatherWebHttpHandler.buildStateJson()`
+(`WeatherWebHttpHandler.java:168-196`) had the identical shape — loops
 `Bukkit.getWorlds()` building the admin panel's JSON with no per-world isolation, so one
 bad world would 500 the entire panel instead of just omitting that world. This sits
 outside Pattern 3's stated search scope (enable/reload paths only, not request-handling
-paths), so left as-is per the audit's "change only what the pattern requires" rule —
-flagging since the same bug shape applies.
+paths), but was fixed on explicit follow-up request since it's the same bug shape: one
+throwing world now logs a warn line naming the world and is omitted from the panel
+response, the rest of the worlds still render.
 
 ---
 

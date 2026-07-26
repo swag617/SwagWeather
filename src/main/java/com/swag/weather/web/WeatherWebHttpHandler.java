@@ -168,24 +168,29 @@ public class WeatherWebHttpHandler implements HttpHandler {
     private List<Map<String, Object>> buildStateJson() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (World world : Bukkit.getWorlds()) {
-            if (!plugin.getWeatherManager().isManaged(world)) continue;
+            try {
+                if (!plugin.getWeatherManager().isManaged(world)) continue;
 
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("world", world.getName());
-            entry.put("intensity", plugin.getApi().getIntensity(world).name());
-            entry.put("season", plugin.getApi().getSeason(world).name());
-            entry.put("daysRemaining", plugin.getApi().getDaysRemainingInSeason(world));
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("world", world.getName());
+                entry.put("intensity", plugin.getApi().getIntensity(world).name());
+                entry.put("season", plugin.getApi().getSeason(world).name());
+                entry.put("daysRemaining", plugin.getApi().getDaysRemainingInSeason(world));
 
-            List<Map<String, Object>> forecast = new ArrayList<>();
-            for (ForecastEntry fe : plugin.getApi().getForecast(world)) {
-                Map<String, Object> f = new LinkedHashMap<>();
-                f.put("intensity", fe.intensity().name());
-                f.put("etaSeconds", fe.etaSeconds());
-                forecast.add(f);
+                List<Map<String, Object>> forecast = new ArrayList<>();
+                for (ForecastEntry fe : plugin.getApi().getForecast(world)) {
+                    Map<String, Object> f = new LinkedHashMap<>();
+                    f.put("intensity", fe.intensity().name());
+                    f.put("etaSeconds", fe.etaSeconds());
+                    forecast.add(f);
+                }
+                entry.put("forecast", forecast);
+
+                result.add(entry);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Web panel state build failed for world '" + world.getName()
+                        + "': " + e.getMessage());
             }
-            entry.put("forecast", forecast);
-
-            result.add(entry);
         }
         return result;
     }
