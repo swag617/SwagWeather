@@ -89,14 +89,19 @@ public class SeasonManager {
     private void tick() {
         if (!enabled) return;
         for (World world : Bukkit.getWorlds()) {
-            WorldSeasonState state = states.computeIfAbsent(world.getName(), n -> newState(world));
-            boolean due = "game_days".equalsIgnoreCase(lengthMode)
-                    ? currentGameDay(world) - state.seasonStartGameDay >= lengthValue
-                    : System.currentTimeMillis() >= state.nextChangeAtMillis;
+            try {
+                WorldSeasonState state = states.computeIfAbsent(world.getName(), n -> newState(world));
+                boolean due = "game_days".equalsIgnoreCase(lengthMode)
+                        ? currentGameDay(world) - state.seasonStartGameDay >= lengthValue
+                        : System.currentTimeMillis() >= state.nextChangeAtMillis;
 
-            if (due) {
-                advance(world, state);
-                publish(world, state);
+                if (due) {
+                    advance(world, state);
+                    publish(world, state);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Season tick failed for world '" + world.getName()
+                        + "': " + e.getMessage());
             }
         }
     }

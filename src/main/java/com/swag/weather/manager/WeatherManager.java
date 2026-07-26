@@ -128,16 +128,21 @@ public class WeatherManager {
     private void tick() {
         if (!enabled) return;
         for (World world : Bukkit.getWorlds()) {
-            if (!isManaged(world)) continue;
-            WorldState state = states.computeIfAbsent(world.getName(), n -> newWorldState());
-            ensureForecastFilled(world, state);
-
-            PendingTransition head = state.forecast.peekFirst();
-            if (head != null && System.currentTimeMillis() >= head.scheduledAtMillis()) {
-                state.forecast.pollFirst();
-                applyTransition(world, state, head.intensity());
+            try {
+                if (!isManaged(world)) continue;
+                WorldState state = states.computeIfAbsent(world.getName(), n -> newWorldState());
                 ensureForecastFilled(world, state);
-                publish(world, state);
+
+                PendingTransition head = state.forecast.peekFirst();
+                if (head != null && System.currentTimeMillis() >= head.scheduledAtMillis()) {
+                    state.forecast.pollFirst();
+                    applyTransition(world, state, head.intensity());
+                    ensureForecastFilled(world, state);
+                    publish(world, state);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Weather tick failed for world '" + world.getName()
+                        + "': " + e.getMessage());
             }
         }
     }
