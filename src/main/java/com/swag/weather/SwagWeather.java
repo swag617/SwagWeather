@@ -1,6 +1,7 @@
 package com.swag.weather;
 
 import com.SwagDev.SwagAPI.api.IEventBusService;
+import com.SwagDev.SwagAPI.api.IPrefixService;
 import com.SwagDev.SwagAPI.api.IWebService;
 import com.swag.weather.command.SwagWeatherCommand;
 import com.swag.weather.manager.SeasonManager;
@@ -39,6 +40,7 @@ public class SwagWeather extends JavaPlugin {
 
     private IEventBusService busService;
     private IWebService webService;
+    private IPrefixService prefixService;
 
     private WeatherManager weatherManager;
     private SeasonManager seasonManager;
@@ -110,6 +112,9 @@ public class SwagWeather extends JavaPlugin {
             getLogger().warning("SwagAPI IWebService not present — admin web panel will be unavailable.");
         }
 
+        RegisteredServiceProvider<IPrefixService> prefixProv = sm.getRegistration(IPrefixService.class);
+        prefixService = (prefixProv != null) ? prefixProv.getProvider() : null;
+
         return true;
     }
 
@@ -168,5 +173,60 @@ public class SwagWeather extends JavaPlugin {
 
     public IWebService getWebService() {
         return webService;
+    }
+
+    public IPrefixService getPrefixService() {
+        return prefixService;
+    }
+
+    /**
+     * Resolves this plugin's self-identifying chat prefix, honoring an admin's
+     * per-plugin or global override set via SwagAPI's web panel (see {@link IPrefixService}).
+     * Falls back to the literal {@code "[SwagWeather] "} when no override is configured
+     * or {@link IPrefixService} isn't available.
+     */
+    private static final java.util.regex.Pattern LEGACY_HEX =
+            java.util.regex.Pattern.compile("(?i)[&§]#([0-9a-f]{6})");
+    private static final java.util.regex.Pattern LEGACY_CODE =
+            java.util.regex.Pattern.compile("(?i)[&§]([0-9a-fk-or])");
+    private static final java.util.Map<Character, String> LEGACY_TAGS = java.util.Map.ofEntries(
+            java.util.Map.entry('0', "<black>"), java.util.Map.entry('1', "<dark_blue>"), java.util.Map.entry('2', "<dark_green>"),
+            java.util.Map.entry('3', "<dark_aqua>"), java.util.Map.entry('4', "<dark_red>"), java.util.Map.entry('5', "<dark_purple>"),
+            java.util.Map.entry('6', "<gold>"), java.util.Map.entry('7', "<gray>"), java.util.Map.entry('8', "<dark_gray>"),
+            java.util.Map.entry('9', "<blue>"), java.util.Map.entry('a', "<green>"), java.util.Map.entry('b', "<aqua>"),
+            java.util.Map.entry('c', "<red>"), java.util.Map.entry('d', "<light_purple>"), java.util.Map.entry('e', "<yellow>"),
+            java.util.Map.entry('f', "<white>"), java.util.Map.entry('k', "<obfuscated>"), java.util.Map.entry('l', "<bold>"),
+            java.util.Map.entry('m', "<strikethrough>"), java.util.Map.entry('n', "<underlined>"), java.util.Map.entry('o', "<italic>"),
+            java.util.Map.entry('r', "<reset>"));
+
+    /**
+     * Renders a stored prefix value from SwagAPI's IPrefixService — which may be MiniMessage
+     * tags (admin-typed via the web panel), legacy {@code &}/{@code §} codes (this plugin's own
+     * fallback constants), or a mix — into a legacy §-coded string safe for this plugin's
+     * ChatColor/sendMessage(String) pipeline. Without this, a MiniMessage-tag override (e.g.
+     * {@code <gold>[FleaMC] </gold>}) would show its literal tag text instead of rendering.
+     */
+    private static String toLegacyPrefix(String raw) {
+        if (raw == null || raw.isEmpty()) return raw;
+        var hex = LEGACY_HEX.matcher(raw);
+        StringBuilder sb = new StringBuilder();
+        while (hex.find()) hex.appendReplacement(sb, "<#" + hex.group(1) + ">");
+        hex.appendTail(sb);
+        raw = sb.toString();
+
+        var code = LEGACY_CODE.matcher(raw);
+        StringBuilder sb2 = new StringBuilder();
+        while (code.find()) {
+            String tag = LEGACY_TAGS.get(Character.toLowerCase(code.group(1).charAt(0)));
+            code.appendReplacement(sb2, tag != null ? java.util.regex.Matcher.quoteReplacement(tag) : "");
+        }
+        code.appendTail(sb2);
+
+        var component = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(sb2.toString());
+        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(component);
+    }
+
+    public String getPrefix() {
+        return toLegacyPrefix((prefixService != null) ? prefixService.getPrefix("SwagWeather", "[SwagWeather] ") : "[SwagWeather] ");
     }
 }

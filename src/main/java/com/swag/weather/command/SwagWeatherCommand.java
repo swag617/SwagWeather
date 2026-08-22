@@ -50,14 +50,14 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
     private void handleStatus(CommandSender sender, String[] args) {
         World world = resolveWorld(sender, args, 1);
         if (world == null) {
-            sender.sendMessage(ChatColor.RED + "[SwagWeather] Could not resolve a world — specify one explicitly.");
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Could not resolve a world — specify one explicitly.");
             return;
         }
         Intensity intensity = plugin.getApi().getIntensity(world);
         Season season = plugin.getApi().getSeason(world);
         long daysRemaining = plugin.getApi().getDaysRemainingInSeason(world);
 
-        sender.sendMessage(ChatColor.GOLD + "[SwagWeather] " + ChatColor.WHITE + world.getName() + ":");
+        sender.sendMessage(ChatColor.GOLD + plugin.getPrefix() + ChatColor.WHITE + world.getName() + ":");
         sender.sendMessage(ChatColor.YELLOW + "  Intensity: " + ChatColor.WHITE + intensity.name());
         sender.sendMessage(ChatColor.YELLOW + "  Season: " + ChatColor.WHITE + season.name()
                 + ChatColor.GRAY + " (" + daysRemaining + " day(s) remaining)");
@@ -66,11 +66,11 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
     private void handleForecast(CommandSender sender, String[] args) {
         World world = resolveWorld(sender, args, 1);
         if (world == null) {
-            sender.sendMessage(ChatColor.RED + "[SwagWeather] Could not resolve a world — specify one explicitly.");
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Could not resolve a world — specify one explicitly.");
             return;
         }
         List<ForecastEntry> forecast = plugin.getApi().getForecast(world);
-        sender.sendMessage(ChatColor.GOLD + "[SwagWeather] " + ChatColor.WHITE + "Forecast for " + world.getName() + ":");
+        sender.sendMessage(ChatColor.GOLD + plugin.getPrefix() + ChatColor.WHITE + "Forecast for " + world.getName() + ":");
         if (forecast.isEmpty()) {
             sender.sendMessage(ChatColor.GRAY + "  (no forecast queued yet — try again shortly)");
             return;
@@ -88,14 +88,14 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
         }
         World world = plugin.getServer().getWorld(args[1]);
         if (world == null) {
-            sender.sendMessage(ChatColor.RED + "[SwagWeather] Unknown world: " + args[1]);
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Unknown world: " + args[1]);
             return;
         }
         Intensity intensity;
         try {
             intensity = Intensity.valueOf(args[2].toUpperCase());
         } catch (IllegalArgumentException e) {
-            sender.sendMessage(ChatColor.RED + "[SwagWeather] Unknown intensity: " + args[2]
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Unknown intensity: " + args[2]
                     + ". Valid: " + intensityNames());
             return;
         }
@@ -104,12 +104,12 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
             try {
                 durationSeconds = Integer.parseInt(args[3]);
             } catch (NumberFormatException e) {
-                sender.sendMessage(ChatColor.RED + "[SwagWeather] Invalid duration seconds: " + args[3]);
+                sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Invalid duration seconds: " + args[3]);
                 return;
             }
         }
         plugin.getApi().forceWeather(world, intensity, durationSeconds * 20);
-        sender.sendMessage(ChatColor.GREEN + "[SwagWeather] Forced " + intensity.name()
+        sender.sendMessage(ChatColor.GREEN + plugin.getPrefix() + "Forced " + intensity.name()
                 + " on " + world.getName() + " for " + durationSeconds + "s.");
     }
 
@@ -120,26 +120,26 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
         }
         World world = plugin.getServer().getWorld(args[1]);
         if (world == null) {
-            sender.sendMessage(ChatColor.RED + "[SwagWeather] Unknown world: " + args[1]);
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Unknown world: " + args[1]);
             return;
         }
         Season season;
         try {
             season = Season.valueOf(args[2].toUpperCase());
         } catch (IllegalArgumentException e) {
-            sender.sendMessage(ChatColor.RED + "[SwagWeather] Unknown season: " + args[2]
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Unknown season: " + args[2]
                     + ". Valid: SPRING, SUMMER, FALL, WINTER");
             return;
         }
         plugin.getApi().forceSeason(world, season);
-        sender.sendMessage(ChatColor.GREEN + "[SwagWeather] Forced season " + season.name() + " on " + world.getName() + ".");
+        sender.sendMessage(ChatColor.GREEN + plugin.getPrefix() + "Forced season " + season.name() + " on " + world.getName() + ".");
     }
 
     private void handleReload(CommandSender sender) {
         plugin.reloadConfig();
         plugin.getWeatherManager().reload();
         plugin.getSeasonManager().reload();
-        sender.sendMessage(ChatColor.GREEN + "[SwagWeather] Configuration reloaded.");
+        sender.sendMessage(ChatColor.GREEN + plugin.getPrefix() + "Configuration reloaded.");
     }
 
     private World resolveWorld(CommandSender sender, String[] args, int index) {
@@ -162,7 +162,7 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "[SwagWeather] " + ChatColor.WHITE + "Commands:");
+        sender.sendMessage(ChatColor.GOLD + plugin.getPrefix() + ChatColor.WHITE + "Commands:");
         sender.sendMessage(ChatColor.YELLOW + "  /sweather status [world]");
         sender.sendMessage(ChatColor.YELLOW + "  /sweather forecast [world]");
         sender.sendMessage(ChatColor.YELLOW + "  /sweather force <world> <intensity> [durationSeconds]");

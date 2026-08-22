@@ -6,7 +6,7 @@
 
     <groupId>com.swag</groupId>
     <artifactId>swagweather</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
 
     <name>SwagWeather</name>
@@ -116,9 +116,9 @@
         <dependency>
             <groupId>com.SwagDev</groupId>
             <artifactId>SwagAPI</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.3</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/SwagAPI-1.0.0.jar</systemPath>
+            <systemPath>${project.basedir}/libs/SwagAPI-1.0.3.jar</systemPath>
         </dependency>
 
         <!-- Gson — used by WeatherWebHttpHandler for the admin panel's JSON endpoints.
