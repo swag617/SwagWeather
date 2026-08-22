@@ -39,6 +39,14 @@ import java.util.logging.Level;
  *       forces an immediate weather transition</li>
  *   <li>{@code POST /api/season} — body {@code {"world":"...","season":"..."}},
  *       forces an immediate season change</li>
+ *   <li>{@code GET /api/config} — current persistent {@code config.yml} settings (world lists,
+ *       weather/season toggles, forecast tuning, weights, season length/order)</li>
+ *   <li>{@code POST /api/config} — persists a subset of {@code config.yml} settings and applies
+ *       them live via {@code WeatherManager.reload()} / {@code SeasonManager.reload()} (same
+ *       reload path as {@code /sweather reload}). Note: {@code weather.check-interval-seconds}
+ *       is only read once at {@code WeatherManager.start()} time, so a change to that one key
+ *       still requires a plugin/server restart to take effect — this matches the existing
+ *       {@code /sweather reload} command's behavior, not a new limitation.</li>
  * </ul>
  *
  * <h3>Thread safety</h3>
@@ -93,6 +101,17 @@ public class WeatherWebHttpHandler implements HttpHandler {
             if (path.equals("/api/season")) {
                 if ("POST".equals(method)) {
                     handlePostSeason(exchange);
+                } else {
+                    sendPlain(exchange, 405, "Method Not Allowed");
+                }
+                return;
+            }
+
+            if (path.equals("/api/config")) {
+                if ("GET".equals(method)) {
+                    handleGetConfig(exchange);
+                } else if ("POST".equals(method)) {
+                    handlePostConfig(exchange);
                 } else {
                     sendPlain(exchange, 405, "Method Not Allowed");
                 }
@@ -313,6 +332,203 @@ public class WeatherWebHttpHandler implements HttpHandler {
                 plugin.getLogger().log(Level.WARNING, "Failed to write web panel POST /api/season response", e);
             }
         });
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/config
+    // -------------------------------------------------------------------------
+
+    private void handleGetConfig(HttpExchange exchange) throws IOException {
+        CompletableFuture<Map<String, Object>> future = new CompletableFuture<>();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                future.complete(buildConfigJson());
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+
+        future.whenComplete((data, err) -> {
+            try {
+                if (err != null) {
+                    plugin.getLogger().log(Level.WARNING, "Failed to build web panel config JSON", err);
+                    sendJson(exchange, 500, "{\"error\":\"Failed to read current config\"}");
+                } else {
+                    sendJson(exchange, 200, gson.toJson(data));
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to write web panel GET /api/config response", e);
+            }
+        });
+    }
+
+    /** Must be called on the main thread. Mirrors the exact key paths read by WeatherManager/SeasonManager#reload(). */
+    private Map<String, Object> buildConfigJson() {
+        Map<String, Object> data = new LinkedHashMap<>();
+
+        data.put("enabledWorlds", plugin.getConfig().getStringList("worlds.enabled-worlds"));
+        data.put("disabledWorlds", plugin.getConfig().getStringList("worlds.disabled-worlds"));
+
+        data.put("weatherEnabled", plugin.getConfig().getBoolean("weather.enabled", true));
+        data.put("checkIntervalSeconds", plugin.getConfig().getInt("weather.check-interval-seconds", 30));
+        data.put("forecastSize", plugin.getConfig().getInt("weather.forecast-size", 5));
+        data.put("minTransitionMinutes", plugin.getConfig().getInt("weather.min-transition-minutes", 10));
+        data.put("maxTransitionMinutes", plugin.getConfig().getInt("weather.max-transition-minutes", 30));
+
+        Map<String, Integer> weights = new LinkedHashMap<>();
+        for (Intensity intensity : Intensity.values()) {
+            weights.put(intensity.name(), plugin.getConfig().getInt("weather.weights." + intensity.name(), 1));
+        }
+        data.put("weights", weights);
+
+        data.put("seasonEnabled", plugin.getConfig().getBoolean("season.enabled", true));
+        data.put("lengthMode", plugin.getConfig().getString("season.length-mode", "real_seconds"));
+        data.put("lengthValue", plugin.getConfig().getLong("season.length-value", 1800));
+        data.put("order", plugin.getConfig().getStringList("season.order"));
+
+        return data;
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/config
+    // -------------------------------------------------------------------------
+
+    /**
+     * Persists a subset of {@code config.yml} settings and applies them live.
+     *
+     * <p>Uses the plugin's live, already-loaded {@link org.bukkit.configuration.file.FileConfiguration}
+     * (via {@code plugin.getConfig()}) and calls {@code .set(path, value)} only for the specific keys
+     * this form submits, then {@code saveConfig()} — it never constructs a fresh blank
+     * {@code YamlConfiguration} and rewrites the whole file from it, which would silently drop any
+     * key this form doesn't know about (e.g. {@code web.enabled}).</p>
+     */
+    private void handlePostConfig(HttpExchange exchange) throws IOException {
+        Map<?, ?> body;
+        try {
+            body = readJsonBody(exchange);
+        } catch (JsonSyntaxException e) {
+            sendJson(exchange, 400, "{\"error\":\"Malformed JSON body\"}");
+            return;
+        }
+        if (body == null) {
+            sendJson(exchange, 400, "{\"error\":\"Empty request body\"}");
+            return;
+        }
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                applyConfigUpdate(body);
+                future.complete(null);
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+
+        future.whenComplete((v, err) -> {
+            try {
+                if (err != null) {
+                    plugin.getLogger().log(Level.WARNING, "Failed to apply web panel config POST", err);
+                    sendJson(exchange, 500, "{\"error\":\"Failed to save config\"}");
+                } else {
+                    sendJson(exchange, 200, "{\"ok\":true}");
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to write web panel POST /api/config response", e);
+            }
+        });
+    }
+
+    /** Must be called on the main thread. */
+    private void applyConfigUpdate(Map<?, ?> body) {
+        if (body.containsKey("enabledWorlds")) {
+            plugin.getConfig().set("worlds.enabled-worlds", asStringList(body.get("enabledWorlds")));
+        }
+        if (body.containsKey("disabledWorlds")) {
+            plugin.getConfig().set("worlds.disabled-worlds", asStringList(body.get("disabledWorlds")));
+        }
+
+        if (body.containsKey("weatherEnabled")) {
+            plugin.getConfig().set("weather.enabled", asBoolean(body.get("weatherEnabled"), true));
+        }
+        if (body.containsKey("checkIntervalSeconds")) {
+            plugin.getConfig().set("weather.check-interval-seconds", Math.max(1, asInt(body.get("checkIntervalSeconds"), 30)));
+        }
+        if (body.containsKey("forecastSize")) {
+            plugin.getConfig().set("weather.forecast-size", Math.max(1, asInt(body.get("forecastSize"), 5)));
+        }
+        if (body.containsKey("minTransitionMinutes") || body.containsKey("maxTransitionMinutes")) {
+            int min = Math.max(1, asInt(body.get("minTransitionMinutes"),
+                    plugin.getConfig().getInt("weather.min-transition-minutes", 10)));
+            int max = Math.max(min, asInt(body.get("maxTransitionMinutes"),
+                    plugin.getConfig().getInt("weather.max-transition-minutes", 30)));
+            plugin.getConfig().set("weather.min-transition-minutes", min);
+            plugin.getConfig().set("weather.max-transition-minutes", max);
+        }
+
+        Object weightsObj = body.get("weights");
+        if (weightsObj instanceof Map<?, ?> weightsMap) {
+            for (Intensity intensity : Intensity.values()) {
+                if (weightsMap.containsKey(intensity.name())) {
+                    int w = asInt(weightsMap.get(intensity.name()), 1);
+                    plugin.getConfig().set("weather.weights." + intensity.name(), Math.max(0, w));
+                }
+            }
+        }
+
+        if (body.containsKey("seasonEnabled")) {
+            plugin.getConfig().set("season.enabled", asBoolean(body.get("seasonEnabled"), true));
+        }
+        if (body.containsKey("lengthMode")) {
+            String mode = asString(body.get("lengthMode"), "real_seconds");
+            if (!"real_seconds".equalsIgnoreCase(mode) && !"game_days".equalsIgnoreCase(mode)) {
+                mode = "real_seconds";
+            }
+            plugin.getConfig().set("season.length-mode", mode);
+        }
+        if (body.containsKey("lengthValue")) {
+            Object lv = body.get("lengthValue");
+            long value = lv instanceof Number n ? n.longValue() : 1800L;
+            plugin.getConfig().set("season.length-value", Math.max(1, value));
+        }
+        if (body.containsKey("order")) {
+            List<String> rawOrder = asStringList(body.get("order"));
+            List<String> validOrder = new ArrayList<>();
+            for (String name : rawOrder) {
+                try {
+                    validOrder.add(Season.valueOf(name.trim().toUpperCase()).name());
+                } catch (IllegalArgumentException ignored) {
+                    plugin.getLogger().warning("Web panel: ignoring unknown season in season.order: " + name);
+                }
+            }
+            if (!validOrder.isEmpty()) {
+                plugin.getConfig().set("season.order", validOrder);
+            }
+        }
+
+        plugin.saveConfig();
+
+        // Apply live, mirroring the exact reload path used by /sweather reload. Note:
+        // weather.check-interval-seconds is only consumed once by WeatherManager#start()
+        // at plugin enable time, so a change to that one key still needs a real restart.
+        plugin.getWeatherManager().reload();
+        plugin.getSeasonManager().reload();
+    }
+
+    private List<String> asStringList(Object o) {
+        List<String> result = new ArrayList<>();
+        if (o instanceof List<?> list) {
+            for (Object item : list) {
+                if (item == null) continue;
+                String s = String.valueOf(item).trim();
+                if (!s.isEmpty()) result.add(s);
+            }
+        }
+        return result;
+    }
+
+    private boolean asBoolean(Object o, boolean def) {
+        return o instanceof Boolean b ? b : def;
     }
 
     // -------------------------------------------------------------------------

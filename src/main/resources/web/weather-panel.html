@@ -133,6 +133,54 @@
   button.secondary { background: var(--surface2); color: var(--text); }
   button.secondary:hover { background: var(--border); }
 
+  .settings-card { margin-bottom: 20px; }
+  .settings-section + .settings-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+  .settings-section h3 {
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .field label {
+    display: block;
+    color: var(--muted);
+    font-size: .78rem;
+    margin-bottom: 4px;
+  }
+  .field input[type=text],
+  .field input[type=number],
+  .field select {
+    width: 100%;
+  }
+  .field-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 4px;
+  }
+  .field-check input[type=checkbox] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+  .field-check label { color: var(--text); font-size: .88rem; margin-bottom: 0; }
+  .field-hint { color: var(--muted); font-size: .74rem; margin-top: 3px; }
+  .settings-footer {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
   #empty-state { color: var(--muted); text-align: center; padding: 40px 0; }
   #toast {
     position: fixed;
@@ -160,6 +208,94 @@
 </header>
 
 <main>
+  <div class="card settings-card">
+    <div class="card-header">
+      <span>⚙ Settings</span>
+      <span id="settings-status" style="color:var(--muted); font-size:.78rem; font-weight:400;"></span>
+    </div>
+    <div class="card-body">
+
+      <div class="settings-section">
+        <h3>Worlds</h3>
+        <div class="settings-grid">
+          <div class="field">
+            <label for="cfg-enabled-worlds">Enabled worlds (comma-separated)</label>
+            <input type="text" id="cfg-enabled-worlds" placeholder="e.g. world, world_nether">
+            <div class="field-hint">If set, ONLY these worlds are managed.</div>
+          </div>
+          <div class="field">
+            <label for="cfg-disabled-worlds">Disabled worlds (comma-separated)</label>
+            <input type="text" id="cfg-disabled-worlds" placeholder="e.g. creative_flat">
+            <div class="field-hint">Ignored if an enabled-worlds list is set above.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Weather</h3>
+        <div class="settings-grid">
+          <div class="field field-check">
+            <input type="checkbox" id="cfg-weather-enabled">
+            <label for="cfg-weather-enabled">Weather system enabled</label>
+          </div>
+          <div class="field">
+            <label for="cfg-check-interval">Check interval (seconds)</label>
+            <input type="number" id="cfg-check-interval" min="1">
+            <div class="field-hint">Requires a restart to take effect (task interval is set at startup).</div>
+          </div>
+          <div class="field">
+            <label for="cfg-forecast-size">Forecast queue size</label>
+            <input type="number" id="cfg-forecast-size" min="1">
+          </div>
+          <div class="field">
+            <label for="cfg-min-transition">Min transition (minutes)</label>
+            <input type="number" id="cfg-min-transition" min="1">
+          </div>
+          <div class="field">
+            <label for="cfg-max-transition">Max transition (minutes)</label>
+            <input type="number" id="cfg-max-transition" min="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Forecast weights</h3>
+        <div class="settings-grid" id="cfg-weights-grid"></div>
+        <div class="field-hint">Relative weights for randomly picking the next forecasted intensity. Higher = more likely; does not need to sum to 100.</div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Season</h3>
+        <div class="settings-grid">
+          <div class="field field-check">
+            <input type="checkbox" id="cfg-season-enabled">
+            <label for="cfg-season-enabled">Season system enabled</label>
+          </div>
+          <div class="field">
+            <label for="cfg-length-mode">Length mode</label>
+            <select id="cfg-length-mode">
+              <option value="real_seconds">real_seconds</option>
+              <option value="game_days">game_days</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="cfg-length-value">Length value</label>
+            <input type="number" id="cfg-length-value" min="1">
+          </div>
+          <div class="field">
+            <label for="cfg-order">Season order (comma-separated)</label>
+            <input type="text" id="cfg-order" placeholder="SPRING, SUMMER, FALL, WINTER">
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-footer">
+        <button class="secondary" id="settings-reload-btn">Reload from disk</button>
+        <button id="settings-save-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
   <div id="empty-state" style="display:none;">No managed worlds found yet — the manager populates state on its first check interval.</div>
   <div class="grid" id="world-grid"></div>
 </main>
@@ -280,8 +416,100 @@ async function loadState() {
   }
 }
 
+// ---------------------------------------------------------------------
+// Settings (config.yml read/write)
+// ---------------------------------------------------------------------
+
+function buildWeightsInputs(weights) {
+  const grid = document.getElementById('cfg-weights-grid');
+  grid.innerHTML = INTENSITIES.map(i => `
+    <div class="field">
+      <label for="cfg-weight-${i}">${i}</label>
+      <input type="number" id="cfg-weight-${i}" min="0" value="${(weights && weights[i] != null) ? weights[i] : 1}">
+    </div>
+  `).join('');
+}
+
+function fillSettingsForm(cfg) {
+  document.getElementById('cfg-enabled-worlds').value = (cfg.enabledWorlds || []).join(', ');
+  document.getElementById('cfg-disabled-worlds').value = (cfg.disabledWorlds || []).join(', ');
+
+  document.getElementById('cfg-weather-enabled').checked = !!cfg.weatherEnabled;
+  document.getElementById('cfg-check-interval').value = cfg.checkIntervalSeconds;
+  document.getElementById('cfg-forecast-size').value = cfg.forecastSize;
+  document.getElementById('cfg-min-transition').value = cfg.minTransitionMinutes;
+  document.getElementById('cfg-max-transition').value = cfg.maxTransitionMinutes;
+
+  buildWeightsInputs(cfg.weights);
+
+  document.getElementById('cfg-season-enabled').checked = !!cfg.seasonEnabled;
+  document.getElementById('cfg-length-mode').value = cfg.lengthMode || 'real_seconds';
+  document.getElementById('cfg-length-value').value = cfg.lengthValue;
+  document.getElementById('cfg-order').value = (cfg.order || []).join(', ');
+}
+
+function parseCsvList(value) {
+  return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+}
+
+function collectSettingsForm() {
+  const weights = {};
+  INTENSITIES.forEach(i => {
+    weights[i] = parseInt(document.getElementById(`cfg-weight-${i}`).value, 10) || 0;
+  });
+
+  return {
+    enabledWorlds: parseCsvList(document.getElementById('cfg-enabled-worlds').value),
+    disabledWorlds: parseCsvList(document.getElementById('cfg-disabled-worlds').value),
+    weatherEnabled: document.getElementById('cfg-weather-enabled').checked,
+    checkIntervalSeconds: parseInt(document.getElementById('cfg-check-interval').value, 10) || 30,
+    forecastSize: parseInt(document.getElementById('cfg-forecast-size').value, 10) || 5,
+    minTransitionMinutes: parseInt(document.getElementById('cfg-min-transition').value, 10) || 10,
+    maxTransitionMinutes: parseInt(document.getElementById('cfg-max-transition').value, 10) || 30,
+    weights,
+    seasonEnabled: document.getElementById('cfg-season-enabled').checked,
+    lengthMode: document.getElementById('cfg-length-mode').value,
+    lengthValue: parseFloat(document.getElementById('cfg-length-value').value) || 1800,
+    order: parseCsvList(document.getElementById('cfg-order').value).map(s => s.toUpperCase())
+  };
+}
+
+async function loadConfig() {
+  const status = document.getElementById('settings-status');
+  status.textContent = 'Loading...';
+  try {
+    const cfg = await api('api/config');
+    fillSettingsForm(cfg);
+    status.textContent = '';
+  } catch (e) {
+    status.textContent = 'Failed to load settings: ' + e.message;
+  }
+}
+
+async function saveConfig() {
+  const status = document.getElementById('settings-status');
+  status.textContent = 'Saving...';
+  try {
+    await api('api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(collectSettingsForm())
+    });
+    status.textContent = '';
+    toast('Settings saved and applied.');
+    loadState();
+  } catch (e) {
+    status.textContent = '';
+    toast('Save failed: ' + e.message, true);
+  }
+}
+
+document.getElementById('settings-save-btn').addEventListener('click', saveConfig);
+document.getElementById('settings-reload-btn').addEventListener('click', loadConfig);
+
 document.getElementById('refresh-btn').addEventListener('click', loadState);
 loadState();
+loadConfig();
 setInterval(loadState, 15000);
 </script>
 </body>
