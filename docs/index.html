@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SwagWeather Documentation</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="SwagWeather - Forecast-driven weather and slow-moving season simulation for Paper/Spigot 1.21, with a cross-plugin event bus other Swag617 plugins react to in real time.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌦️</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+</head>
+<body>
+  <nav class="port-nav">
+    <a href="https://swag617.github.io/" class="nav-logo">swag617</a>
+    <div class="nav-links">
+      <a href="https://swag617.github.io/#plugins">Plugins</a>
+      <a href="https://swag617.github.io/#about">About</a>
+      <a href="https://github.com/swag617/SwagWeather" target="_blank" class="nav-gh">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </nav>
+
+  <div id="app"></div>
+
+  <div id="sidebar-footer">
+    <a href="https://github.com/swag617/SwagWeather/releases" target="_blank" class="sf-btn sf-full">
+      📦 Releases
+    </a>
+    <div class="sf-row">
+      <a href="#/admin-commands/commands" class="sf-btn sf-half">Commands</a>
+      <a href="#/troubleshooting/troubleshooting" class="sf-btn sf-half">FAQ</a>
+    </div>
+  </div>
+  <div id="page-transition"></div>
+  <script>
+    var NAV_H = 56;
+
+    function fixLayout() {
+      var sidebar = document.querySelector('.sidebar');
+      var toggle  = document.querySelector('.sidebar-toggle');
+      var content = document.querySelector('.content');
+      if (sidebar) { sidebar.style.top = NAV_H + 'px'; sidebar.style.height = 'calc(100vh - ' + NAV_H + 'px)'; }
+      if (toggle)  { toggle.style.display = 'none'; }
+      if (content) { content.style.paddingTop = NAV_H + 'px'; }
+    }
+
+    window.$docsify = {
+      name: 'SwagWeather',
+      homepage: 'README.md',
+      loadSidebar: 'sidebar.md',
+      coverpage: 'coverpage.md',
+      auto2top: true,
+      maxLevel: 3,
+      subMaxLevel: 2,
+      themeColor: '#764ba2',
+      sidebarDisplayLevel: 3,
+      pagination: {
+        previousText: '← Previous',
+        nextText: 'Next →',
+        crossChapter: true,
+        crossChapterText: true,
+      },
+      search: {
+        paths: 'auto',
+        placeholder: 'Search documentation...',
+        depth: 3
+      },
+      plugins: [function(hook) {
+        hook.mounted(function() { setTimeout(fixLayout, 0); });
+        hook.doneEach(function() {
+          window.scrollTo(0, 0);
+          fixLayout();
+
+          // Custom collapse — each section independent, no accordion
+          var items = document.querySelectorAll('.sidebar-nav > ul > li');
+          items.forEach(function(li) {
+            var subList = li.querySelector('ul');
+            var label   = li.querySelector('p');
+            if (!subList || !label) return;
+
+            // Add arrow once
+            if (!label.querySelector('.sc-arrow')) {
+              var arrow = document.createElement('span');
+              arrow.className = 'sc-arrow';
+              arrow.textContent = '›';
+              label.appendChild(arrow);
+            }
+
+            // Attach click — only toggles THIS section
+            label.onclick = function() {
+              li.classList.toggle('sc-closed');
+            };
+          });
+        });
+      }]
+    }
+  </script>
+
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-java.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/progress-bar.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
+  <script>
+    document.addEventListener('click', function(e) {
+      var link = e.target.closest('section.cover a');
+      if (!link) return;
+      var href = link.getAttribute('href');
+      // Skip external links (GitHub button etc.)
+      if (!href || href.startsWith('http') || href.startsWith('//')) return;
+
+      var overlay = document.getElementById('page-transition');
+      overlay.classList.add('active');
+      overlay.addEventListener('animationend', function() {
+        overlay.classList.remove('active');
+      }, { once: true });
+    });
+  </script>
+
+  <style>
+    :root {
+      --bg:            #1a1a1a;
+      --bg-card:       #1e1e1e;
+      --bg-sidebar:    #212121;
+      --border:        #2a2a2a;
+      --border-dim:    #333;
+      --border-accent: #764ba2;
+      --purple:        #764ba2;
+      --blue:          #667eea;
+      --purple-muted:  #9b8ec4;
+      --purple-light:  #c0b3d8;
+      --text:          #e0e0e0;
+      --text-muted:    #999;
+      --grad:          linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --theme-color: #764ba2;
+      --theme-color-dark: #667eea;
+    }
+
+    /* ── Typography ── */
+    body,
+    .markdown-section {
+      font-family: 'Inter', sans-serif !important;
+    }
+
+    .markdown-section code,
+    .markdown-section pre,
+    pre code {
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    body {
+      background-color: var(--bg) !important;
+    }
+
+    .port-nav {
+      margin: 0 !important;
+    }
+
+    /* Faint grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(118,75,162,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(118,75,162,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Portfolio nav bar ── */
+    .port-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 250;
+      /* Left 300px matches sidebar bg; right side gets blur panel */
+      background: linear-gradient(to right,
+        var(--bg-sidebar) 0px,
+        var(--bg-sidebar) 300px,
+        rgba(26,26,26,0.92) 300px
+      );
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-dim);
+      padding: 0 40px 0 96px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    /* Hide nav and sidebar footer while cover page is visible */
+    body:has(section.cover.show) .port-nav,
+    body:has(section.cover.show) #sidebar-footer {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-100%) !important;
+    }
+
+    /* Gradient line under nav */
+    .port-nav::after {
+      content: '';
+      position: absolute;
+      bottom: -2px; left: 0; right: 0;
+      height: 2px;
+      background: var(--grad);
+      opacity: 0.6;
+    }
+
+    .nav-logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-links a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: color 0.18s;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-gh {
+      display: flex !important;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px;
+      border: 1px solid var(--border-dim);
+      border-radius: 7px;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      color: var(--purple-light) !important;
+      background: rgba(118,75,162,0.07);
+      transition: all 0.18s !important;
+    }
+
+    .nav-gh:hover {
+      border-color: var(--border-accent) !important;
+      background: rgba(118,75,162,0.14) !important;
+      color: white !important;
+    }
+
+    /* ── Sidebar footer (Releases / Commands / FAQ) ── */
+    #sidebar-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 300px;
+      padding: 10px 10px 12px;
+      background: var(--bg-sidebar);
+      border-top: 1px solid var(--border-dim);
+      border-right: 1px solid var(--border-dim);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .sf-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .sf-btn {
+      display: block;
+      padding: 7px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border-dim);
+      background: rgba(255,255,255,0.03);
+      color: var(--text-muted) !important;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      text-decoration: none !important;
+      transition: background 0.18s, border-color 0.18s, color 0.18s;
+    }
+
+    .sf-btn:hover {
+      background: rgba(118,75,162,0.12) !important;
+      border-color: var(--border-accent) !important;
+      color: var(--purple-light) !important;
+    }
+
+    .sf-full  { width: 100%; }
+    .sf-half  { flex: 1; }
+
+    /* Push sidebar scroll area up so content isn't hidden behind footer */
+    .sidebar {
+      padding-bottom: 130px !important;
+    }
+
+    /* ── Sidebar collapse ── */
+    .sidebar-nav > ul > li > ul {
+      overflow: hidden;
+      max-height: 600px;
+      opacity: 1;
+      transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.22s ease;
+    }
+
+    .sidebar-nav > ul > li.sc-closed > ul {
+      max-height: 0 !important;
+      opacity: 0;
+    }
+
+    .sc-arrow {
+      float: right;
+      font-size: 13px;
+      color: var(--blue);
+      opacity: 0.7;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+
+    .sidebar-nav > ul > li.sc-closed .sc-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .sidebar-nav > ul > li > p {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background-color: var(--bg-sidebar) !important;
+      border-right: 1px solid var(--border-dim) !important;
+    }
+
+    /* Hide the Docsify toggle button — handled by JS layout fix */
+    .sidebar-toggle {
+      display: none !important;
+    }
+
+    /* Hide sidebar site name */
+    .app-name {
+      display: none !important;
+    }
+
+    /* Site name — portfolio nav-logo style */
+    .app-name-link {
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      background: var(--grad) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      letter-spacing: 1px !important;
+    }
+
+
+    .sidebar-nav li.active > a {
+      color: var(--theme-color) !important;
+      border-right: 2px solid var(--theme-color) !important;
+    }
+
+    .sidebar-nav li a:hover {
+      color: var(--theme-color) !important;
+    }
+
+    /* Home button */
+    .sidebar-nav > ul > li:first-child > a {
+      display: block;
+      margin: 0 10px 8px;
+      padding: 7px 14px;
+      background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
+      border: 1px solid rgba(118,75,162,0.35);
+      border-radius: 8px;
+      color: var(--purple-light) !important;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none !important;
+      transition: all 0.18s;
+    }
+
+    .sidebar-nav > ul > li:first-child > a:hover {
+      background: linear-gradient(135deg, rgba(102,126,234,0.25), rgba(118,75,162,0.25));
+      border-color: var(--purple);
+      color: white !important;
+    }
+
+    /* Section headers */
+    .sidebar-nav > ul > li > p {
+      color: var(--blue);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin: 20px 0 6px 16px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border-dim);
+      opacity: 0.8;
+    }
+
+    /* ── Content area ── */
+    .content {
+      background-color: var(--bg-card) !important;
+    }
+
+    .markdown-section {
+      color: var(--text) !important;
+    }
+
+    .markdown-section h1,
+    .markdown-section h3,
+    .markdown-section h4 {
+      color: var(--theme-color) !important;
+    }
+
+    /* H2 accent left-border */
+    .markdown-section h2 {
+      color: var(--theme-color) !important;
+      border-left: 3px solid var(--theme-color);
+      padding-left: 12px;
+      margin-left: -15px;
+    }
+
+    .markdown-section a {
+      color: var(--theme-color-dark) !important;
+    }
+
+    .markdown-section a:hover {
+      color: var(--theme-color) !important;
+    }
+
+    .markdown-section code {
+      background-color: #2d2d2d !important;
+      color: var(--blue) !important;
+    }
+
+    /* Better code blocks */
+    .markdown-section pre {
+      background-color: #0d0d0d !important;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    /* ── Blockquotes / callouts ── */
+    .markdown-section blockquote {
+      border-left: 4px solid var(--purple) !important;
+      background-color: #1a1230 !important;
+      color: var(--purple-muted) !important;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .markdown-section blockquote strong {
+      color: var(--text) !important;
+    }
+
+    /* Tip — green */
+    .markdown-section blockquote:has(strong:first-child) {
+      border-left-color: #4caf50 !important;
+    }
+
+    /* ── Tables — portfolio card style ── */
+    .markdown-section table {
+      background-color: var(--bg-sidebar) !important;
+      border: 1px solid var(--border-accent) !important;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .markdown-section thead {
+      background: var(--grad) !important;
+    }
+
+    .markdown-section thead th {
+      color: white !important;
+    }
+
+    .markdown-section tbody tr {
+      border-bottom: 1px solid var(--border-dim) !important;
+    }
+
+    .markdown-section tbody tr:hover {
+      background-color: #1a1230 !important;
+    }
+
+    /* ── Cover page ── */
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    section.cover {
+      position: relative !important;
+      background: #0f0c29 !important;
+    }
+
+    section.cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #667eea, #764ba2);
+      background-size: 300% 300%;
+      animation: gradientShift 8s ease infinite;
+      z-index: 0;
+    }
+
+    section.cover .cover-main {
+      position: relative;
+      z-index: 1;
+    }
+
+    section.cover h1 {
+      font-size: 3.5rem !important;
+      font-weight: 700 !important;
+      letter-spacing: -1px !important;
+    }
+
+    section.cover .cover-main > blockquote {
+      background: rgba(255, 255, 255, 0.1) !important;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      border-radius: 12px !important;
+      border-left: none !important;
+      padding: 14px 20px !important;
+    }
+
+    /* ── Search ── */
+    .search input {
+      background-color: #2d2d2d !important;
+      border: 1px solid #444 !important;
+      color: #e0e0e0 !important;
+    }
+
+    .search input:focus {
+      border-color: var(--theme-color) !important;
+    }
+
+    /* ── Pagination ── */
+    .pagination-item--next .pagination-item-title,
+    .pagination-item--previous .pagination-item-title {
+      color: var(--theme-color) !important;
+    }
+
+    .pagination-item a {
+      color: var(--theme-color-dark) !important;
+      border: 1px solid #333 !important;
+      border-radius: 6px !important;
+      padding: 8px 14px !important;
+      text-decoration: none !important;
+      transition: border-color 0.2s;
+    }
+
+    .pagination-item a:hover {
+      border-color: var(--theme-color) !important;
+    }
+
+    /* ── Page transition overlay ── */
+    @keyframes transitionFlash {
+      0%   { opacity: 0; transform: scale(0.95); }
+      40%  { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.08); }
+    }
+
+    #page-transition {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #667eea, #764ba2);
+      background-size: 300% 300%;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #page-transition.active {
+      animation: transitionFlash 0.7s ease forwards;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #764ba2;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #667eea;
+    }
+  </style>
+</body>
+</html>

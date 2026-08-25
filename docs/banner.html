@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwagWeather – Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:            #1a1a1a;
+    --bg-card:       #1e1e1e;
+    --bg-sidebar:    #212121;
+    --bg-active:     #1a1230;
+    --border:        #2a2a2a;
+    --border-dim:    #333;
+    --border-accent: #764ba2;
+    --purple:        #764ba2;
+    --blue:          #667eea;
+    --purple-muted:  #9b8ec4;
+    --purple-light:  #c0b3d8;
+    --text:          #e0e0e0;
+    --text-muted:    #999;
+    --text-dim:      #666;
+    --gold:          #f0c060;
+    --green:         #5fe05f;
+    --grad:          linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --font:          'Inter', sans-serif;
+    --mono:          'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--font); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 3px; }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .section-label span {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blue);
+    white-space: nowrap;
+    opacity: 0.8;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-dim);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    height: 280px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(118,75,162,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #667eea, #764ba2);
+    background-size: 300% 300%;
+    animation: gradientShift 8s ease infinite;
+  }
+  @keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 40%, rgba(10,8,30,0.5) 100%);
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+  .hero-title {
+    font-size: clamp(40px, 6.4vw, 68px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 2px 30px rgba(102,126,234,0.45);
+  }
+  .hero-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    font-weight: 400;
+    max-width: 480px;
+    line-height: 1.55;
+  }
+  .hero-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hero-pill {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 4px 13px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.8);
+  }
+
+  /* ── CARDS ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr;     gap: 10px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .card {
+    background: var(--bg-active);
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
+    padding: 24px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--blue); }
+  a.card-link { text-decoration: none; color: inherit; display: block; height: 100%; }
+  a.card-link:hover .card { border-color: var(--blue); }
+  a.card-link .card { height: 100%; transition: border-color 0.2s, transform 0.15s; box-sizing: border-box; }
+  a.card-link:hover .card { transform: translateY(-2px); }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--grad);
+    opacity: 0.7;
+  }
+  .card-icon { font-size: 28px; margin-bottom: 12px; display: block; line-height: 1; }
+  .card-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 7px; }
+  .card-desc { font-size: 12.5px; line-height: 1.65; color: var(--purple-muted); }
+  .card-desc strong { color: var(--text); font-weight: 600; }
+
+  /* ── WIDE CARD ── */
+  .wide-card {
+    background: var(--bg-active);
+    border: 1px solid var(--border-accent);
+    border-radius: 10px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .wide-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--grad);
+    opacity: 0.7;
+  }
+  .wide-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 40% 100% at 0% 50%, rgba(102,126,234,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .wide-text { flex: 1; }
+  .wide-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--purple-muted);
+    opacity: 0.8;
+    margin-bottom: 8px;
+  }
+  .wide-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .wide-desc { font-size: 13px; line-height: 1.7; color: var(--purple-muted); max-width: 460px; }
+  .wide-desc strong { color: var(--text); font-weight: 600; }
+
+  .tax-stack { display: flex; flex-direction: column; gap: 6px; min-width: 210px; }
+  .tax-pill {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(118,75,162,0.3);
+    background: rgba(118,75,162,0.06);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--purple-light);
+  }
+  .tdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--grad); }
+
+  /* ── FOOTER BAR ── */
+  .footer-bar {
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 6px;
+  }
+  .footer-left { display: flex; flex-direction: column; gap: 9px; }
+  .compat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--blue);
+    opacity: 0.7;
+  }
+  .ver-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+  .ver-chip {
+    padding: 3px 12px;
+    border-radius: 20px;
+    background: rgba(102,126,234,0.08);
+    border: 1px solid rgba(118,75,162,0.25);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--purple-light);
+    font-family: var(--mono);
+  }
+  .footer-right { display: flex; gap: 28px; align-items: center; }
+  .stat-block { text-align: center; }
+  .stat-num {
+    font-size: 24px;
+    font-weight: 800;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+  .stat-lbl {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin-top: 3px;
+  }
+  .dl-btn {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, rgba(102,126,234,0.12), rgba(118,75,162,0.12));
+    border: 1px solid rgba(118,75,162,0.4);
+    border-radius: 8px;
+    color: var(--purple-light);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .dl-btn:hover {
+    background: linear-gradient(135deg, rgba(102,126,234,0.2), rgba(118,75,162,0.2));
+    border-color: var(--purple);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: #252525;
+    color: var(--blue);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .hint {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #2e2e2e;
+    text-transform: uppercase;
+    padding-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-label">Minecraft Plugin &nbsp;·&nbsp; Paper 1.21</div>
+      <div class="hero-title">🌦️ SwagWeather</div>
+      <div class="hero-sub">Forecast-driven weather and a slow-moving season cycle, published live on a cross-plugin event bus for the rest of the Swag617 ecosystem to react to.</div>
+      <div class="hero-pills">
+        <span class="hero-pill">Paper 1.21</span>
+        <span class="hero-pill">Java 17+</span>
+        <span class="hero-pill">Requires SwagAPI</span>
+        <span class="hero-pill">5 Intensity Tiers</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CORE FEATURES -->
+  <div class="section-label"><span>Core Features</span></div>
+  <div class="grid-2">
+    <a class="card-link" href="./index.html#/core-features/weather-system">
+      <div class="card">
+        <span class="card-icon">🌦️</span>
+        <div class="card-title">Weather System</div>
+        <div class="card-desc">5 intensity tiers (<code>CLEAR</code> → <code>THUNDERSTORM</code>) mapped onto <strong>real vanilla storm/thunder state</strong>, driven by a per-world forecast queue with configurable, weighted random transitions.</div>
+      </div>
+    </a>
+    <a class="card-link" href="./index.html#/core-features/seasons">
+      <div class="card">
+        <span class="card-icon">🍂</span>
+        <div class="card-title">Season Cycle</div>
+        <div class="card-desc">An independent Spring → Summer → Fall → Winter cycle, timed in <strong>real seconds or in-game days</strong>, tracked separately per world on its own cadence from weather.</div>
+      </div>
+    </a>
+    <a class="card-link" href="./index.html#/core-features/event-bus">
+      <div class="card">
+        <span class="card-icon">🔌</span>
+        <div class="card-title">Cross-Plugin Event Bus</div>
+        <div class="card-desc">Publishes every change on SwagAPI's shared bus (<code>"weather"</code> / <code>"season"</code> channels) so <strong>SwagFarming and SwagFishing</strong> react with zero compile-time dependency.</div>
+      </div>
+    </a>
+    <a class="card-link" href="./index.html#/core-features/admin-web-panel">
+      <div class="card">
+        <span class="card-icon">🖥️</span>
+        <div class="card-title">Admin Web Panel</div>
+        <div class="card-desc">A live dashboard through SwagAPI's shared web server — per-world intensity, season, and forecast, plus <strong>force controls and a full settings editor</strong>.</div>
+      </div>
+    </a>
+  </div>
+
+  <!-- EVENT BUS -->
+  <div class="section-label"><span>The Integration Surface</span></div>
+  <a href="./index.html#/core-features/event-bus" style="text-decoration:none;color:inherit;display:block;">
+    <div class="wide-card" style="cursor:pointer;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#667eea';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='';this.style.transform=''">
+      <div class="wide-text">
+        <div class="wide-tag">No Compile-Time Dependency Required</div>
+        <div class="wide-title">Other Plugins React in Real Time</div>
+        <div class="wide-desc">Every weather or season change is published on <strong>SwagAPI's event bus</strong>. SwagFarming turns real rain into genuine crop growth-speed bonuses and season-match multipliers; SwagFishing turns a storm into a temporary <strong>Feeding Frenzy</strong> and announces seasonal migratory fish. A compile-time <code>SwagWeatherAPI</code> is also available for plugins that want it directly.</div>
+      </div>
+      <div class="tax-stack">
+        <div class="tax-pill"><span class="tdot"></span> "weather" channel</div>
+        <div class="tax-pill"><span class="tdot"></span> "season" channel</div>
+        <div class="tax-pill"><span class="tdot"></span> SwagFarming consumes it</div>
+        <div class="tax-pill"><span class="tdot"></span> SwagFishing consumes it</div>
+      </div>
+    </div>
+  </a>
+
+  <!-- ADMIN & PERMISSIONS -->
+  <div class="section-label"><span>Admin & Permissions</span></div>
+  <div class="grid-3">
+    <a class="card-link" href="./index.html#/admin-commands/commands">
+      <div class="card">
+        <span class="card-icon">🛠️</span>
+        <div class="card-title">/sweather (5 subcommands)</div>
+        <div class="card-desc"><code>status</code>, <code>forecast</code>, <code>force</code>, <code>season</code>, and <code>reload</code> — aliases <code>/weather</code> and <code>/sw</code>, with full tab completion.</div>
+      </div>
+    </a>
+    <a class="card-link" href="./index.html#/permissions/permissions">
+      <div class="card">
+        <span class="card-icon">🔐</span>
+        <div class="card-title">1 Permission Node</div>
+        <div class="card-desc"><code>swagweather.admin</code> (default <strong>op</strong>) gates the entire <code>/sweather</code> command tree at the plugin.yml level.</div>
+      </div>
+    </a>
+    <a class="card-link" href="./index.html#/troubleshooting/troubleshooting">
+      <div class="card">
+        <span class="card-icon">🩹</span>
+        <div class="card-title">Troubleshooting</div>
+        <div class="card-desc">Answers for a plugin that won't enable, weather that won't change, and seasons that don't seem to be advancing.</div>
+      </div>
+    </a>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-bar">
+    <div class="footer-left">
+      <div class="compat-label">Compatibility</div>
+      <div class="ver-chips">
+        <span class="ver-chip">Paper 1.21</span>
+        <span class="ver-chip">Java 17+</span>
+        <span class="ver-chip">SwagAPI (hard dep)</span>
+      </div>
+    </div>
+    <div class="footer-right">
+      <div class="stat-block">
+        <div class="stat-num">5</div>
+        <div class="stat-lbl">Intensity Tiers</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num">4</div>
+        <div class="stat-lbl">Seasons</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num">5</div>
+        <div class="stat-lbl">Subcommands</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-num">1.0.5</div>
+        <div class="stat-lbl">Version</div>
+      </div>
+      <a href="https://github.com/swag617/SwagWeather/releases" target="_blank" style="text-decoration:none;"><button class="dl-btn">Download on GitHub</button></a>
+    </div>
+  </div>
+
+  <div class="hint"><a href="./index.html#/getting-started/installation" style="color:#764ba2;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;">→ getting started</a> &nbsp;·&nbsp; <a href="./index.html#/troubleshooting/troubleshooting" style="color:#764ba2;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;">faq</a></div>
+</div>
+</body>
+</html>
