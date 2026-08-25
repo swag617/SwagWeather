@@ -1,6 +1,6 @@
 # 🛠️ Admin Commands
 
-All commands are under `/sweather` (aliases `/weather`, `/sw`) and require `swagweather.admin` (default: op). This permission is enforced at the `plugin.yml` command level — there's a single check gating the whole command tree, not per-subcommand permissions.
+All commands are under `/sweather` (aliases `/weather`, `/sw`) and require `swagweather.admin` (default: op). This permission is enforced at the `plugin.yml` command level: there's a single check gating the whole command tree, not per-subcommand permissions.
 
 ## Command Reference
 
@@ -31,7 +31,7 @@ Running `/sweather` with no arguments (or an unrecognized subcommand) prints thi
 
 Both accept an optional `[world]` argument. If omitted:
 * A player defaults to their **current world**.
-* Console (or any non-player sender) with no world specified gets an error — there's no "current world" to fall back to.
+* Console (or any non-player sender) with no world specified gets an error: there's no "current world" to fall back to.
 
 ### `force`
 
@@ -43,7 +43,7 @@ Both accept an optional `[world]` argument. If omitted:
 * `<intensity>` must be one of `CLEAR`, `LIGHT_RAIN`, `RAIN`, `HEAVY_RAIN`, `THUNDERSTORM` (case-insensitive). An unrecognized value prints the valid list back to you.
 * `[durationSeconds]` is the length of the forced weather in real seconds (converted to ticks internally); defaults to `600` (10 minutes) if omitted.
 
-Forcing clears that world's forecast queue and applies the change immediately, then regenerates a fresh forecast starting after the forced duration ends — natural transitions resume automatically once it expires.
+Forcing clears that world's forecast queue and applies the change immediately, then regenerates a fresh forecast starting after the forced duration ends; natural transitions resume automatically once it expires.
 
 ### `season`
 

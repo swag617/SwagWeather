@@ -4,11 +4,11 @@
 
 * **Minecraft:** Paper/Spigot 1.21 (built against `api-version: "1.21"`)
 * **Java:** 17+ (the plugin is compiled for Java 17)
-* **[SwagAPI](https://github.com/swag617/SwagAPI):** **Required.** Declared as a hard `depend: [SwagAPI]` in `plugin.yml` — SwagWeather looks up SwagAPI's `IEventBusService` in `onEnable()` and immediately disables itself if that service isn't found. There is no fallback mode; SwagWeather cannot run without SwagAPI.
+* **[SwagAPI](https://github.com/swag617/SwagAPI):** **Required.** Declared as a hard `depend: [SwagAPI]` in `plugin.yml`: SwagWeather looks up SwagAPI's `IEventBusService` in `onEnable()` and immediately disables itself if that service isn't found. There is no fallback mode; SwagWeather cannot run without SwagAPI.
 
-SwagWeather has no other dependencies — it doesn't use Vault, PlaceholderAPI, or WorldGuard.
+SwagWeather has no other dependencies; it doesn't use Vault, PlaceholderAPI, or WorldGuard.
 
-> Because SwagAPI is a hard dependency, the server's plugin loader guarantees it's fully enabled — and has registered its services — before SwagWeather's `onEnable()` ever runs. There's no enable-order race to worry about.
+> Because SwagAPI is a hard dependency, the server's plugin loader guarantees it's fully enabled (and has registered its services) before SwagWeather's `onEnable()` ever runs. There's no enable-order race to worry about.
 
 ## Installing
 
@@ -36,7 +36,7 @@ Then run in-game or from console:
 /sweather status
 ```
 
-You should see the current intensity and season for your world printed back. If the plugin failed to enable, the very first thing to check is whether SwagAPI is actually installed and enabled — see [Troubleshooting](../troubleshooting/troubleshooting.md).
+You should see the current intensity and season for your world printed back. If the plugin failed to enable, the very first thing to check is whether SwagAPI is actually installed and enabled; see [Troubleshooting](../troubleshooting/troubleshooting.md).
 
 ## File Structure
 
@@ -49,13 +49,13 @@ plugins/SwagWeather/
     └── weather-panel.html        # Admin web panel (copied from the jar)
 ```
 
-> **Note:** SwagWeather keeps no database and writes nothing else to disk. Every forecast queue and season timer lives in memory and regenerates fresh the next time the plugin starts — there's no save-on-shutdown step and nothing to lose on restart.
+> **Note:** SwagWeather keeps no database and writes nothing else to disk. Every forecast queue and season timer lives in memory and regenerates fresh the next time the plugin starts; there's no save-on-shutdown step and nothing to lose on restart.
 
 ## First-Time Setup
 
 ### 1. Decide Which Worlds Are Managed
 
-By default SwagWeather manages **every** world on the server. If you only want it active in specific worlds (say, your overworld but not a minigame arena), set `worlds.enabled-worlds` in `config.yml` to an explicit list — see [Configuration](configuration.md).
+By default SwagWeather manages **every** world on the server. If you only want it active in specific worlds (say, your overworld but not a minigame arena), set `worlds.enabled-worlds` in `config.yml` to an explicit list; see [Configuration](configuration.md).
 
 ### 2. Try the Core Loop
 
@@ -66,7 +66,7 @@ By default SwagWeather manages **every** world on the server. If you only want i
 
 ### 3. Install a Companion Plugin (Optional)
 
-SwagWeather is most interesting when something else is listening. Install **SwagFarming** or **SwagFishing** alongside it (both already declare SwagWeather as a soft dependency) and their weather/season integrations activate automatically — no extra configuration needed on either side. See [Cross-Plugin Event Bus](../core-features/event-bus.md).
+SwagWeather is most interesting when something else is listening. Install **SwagFarming** or **SwagFishing** alongside it (both already declare SwagWeather as a soft dependency) and their weather/season integrations activate automatically, with no extra configuration needed on either side. See [Cross-Plugin Event Bus](../core-features/event-bus.md).
 
 ## Updating
 
@@ -74,7 +74,7 @@ SwagWeather is most interesting when something else is listening. Install **Swag
 2. Replace `SwagWeather.jar`.
 3. **Start the server.**
 
-There's no data to back up — `config.yml` is the only file SwagWeather persists, and forecast/season state simply regenerates on boot.
+There's no data to back up: `config.yml` is the only file SwagWeather persists, and forecast/season state simply regenerates on boot.
 
 ## Next Steps
 
