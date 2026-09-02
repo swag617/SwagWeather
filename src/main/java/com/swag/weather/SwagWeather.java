@@ -4,6 +4,7 @@ import com.SwagDev.SwagAPI.api.IEventBusService;
 import com.SwagDev.SwagAPI.api.IPrefixService;
 import com.SwagDev.SwagAPI.api.IWebService;
 import com.swag.weather.command.SwagWeatherCommand;
+import com.swag.weather.manager.ClaimWeatherManager;
 import com.swag.weather.manager.SeasonManager;
 import com.swag.weather.manager.WeatherManager;
 import com.swag.weather.web.WeatherWebModule;
@@ -29,6 +30,9 @@ import java.io.File;
  *       succeed for the plugin to keep running.</li>
  *   <li>{@link WeatherManager} — forecast queues + vanilla weather driver.</li>
  *   <li>{@link SeasonManager} — slow-moving season progression.</li>
+ *   <li>{@link ClaimWeatherManager} — cosmetic per-player GriefPrevention claim
+ *       weather override (soft-dep on GriefPrevention); layered on top of, and
+ *       fully isolated from, {@link WeatherManager}'s real per-world weather.</li>
  *   <li>{@link WeatherWebModule} — admin web panel (soft-dep on {@link IWebService},
  *       though SwagAPI is a hard plugin dependency so it's normally always present).</li>
  *   <li>{@code /sweather} command.</li>
@@ -44,6 +48,7 @@ public class SwagWeather extends JavaPlugin {
 
     private WeatherManager weatherManager;
     private SeasonManager seasonManager;
+    private ClaimWeatherManager claimWeatherManager;
     private WeatherWebModule webModule;
     private SwagWeatherAPI api;
 
@@ -60,10 +65,13 @@ public class SwagWeather extends JavaPlugin {
 
         weatherManager = new WeatherManager(this);
         seasonManager = new SeasonManager(this);
+        claimWeatherManager = new ClaimWeatherManager(this);
         api = new SwagWeatherAPI(weatherManager, seasonManager);
 
         weatherManager.start();
         seasonManager.start();
+        getServer().getPluginManager().registerEvents(claimWeatherManager, this);
+        claimWeatherManager.start();
 
         saveWebPanel();
         webModule = new WeatherWebModule(this);
@@ -84,6 +92,9 @@ public class SwagWeather extends JavaPlugin {
         }
         if (seasonManager != null) {
             seasonManager.shutdown();
+        }
+        if (claimWeatherManager != null) {
+            claimWeatherManager.shutdown();
         }
         getLogger().info("SwagWeather has been disabled.");
     }
@@ -161,6 +172,10 @@ public class SwagWeather extends JavaPlugin {
 
     public SeasonManager getSeasonManager() {
         return seasonManager;
+    }
+
+    public ClaimWeatherManager getClaimWeatherManager() {
+        return claimWeatherManager;
     }
 
     public WeatherWebModule getWebModule() {

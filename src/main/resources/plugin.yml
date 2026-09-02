@@ -5,11 +5,17 @@ api-version: 1.21
 depend: [SwagAPI]
 commands:
   sweather:
-    description: SwagWeather admin command
-    usage: /<command> <status|forecast|force|season|reload> [args]
+    description: SwagWeather command
+    usage: /<command> <status|forecast|force|season|reload|claim> [args]
     aliases: [weather, sw]
-    permission: swagweather.admin
+# No command-level `permission:` here (unlike SwagTags/SwagRestartScheduler's usual
+# single-permission-per-command idiom) — this command now mixes admin-only
+# subcommands with the player-facing `claim` subcommand, so permission is instead
+# checked per-subcommand inside SwagWeatherCommand.
 permissions:
   swagweather.admin:
-    description: Allows access to SwagWeather admin commands
+    description: Allows access to SwagWeather admin commands (status/forecast/force/season/reload)
     default: op
+  swagweather.claim:
+    description: Allows setting a personal cosmetic weather override inside a GriefPrevention claim you can edit
+    default: true

@@ -6,7 +6,7 @@
 
     <groupId>com.swag</groupId>
     <artifactId>swagweather</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <packaging>jar</packaging>
 
     <name>SwagWeather</name>
@@ -94,6 +94,10 @@
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
     </repositories>
 
     <distributionManagement>
@@ -128,6 +132,18 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- GriefPrevention (soft-dep) — resolved via jitpack, mirrors SwagFishing's pom.xml
+             exactly (same groupId/artifactId/version). Not bundled: Main Server already
+             loads the real GriefPrevention.jar plugin, which provides these classes at
+             runtime. Compile-time only; presence is checked reflectively at runtime in
+             ClaimWeatherManager, which never throws if the plugin is absent. -->
+        <dependency>
+            <groupId>com.github.TechFortress</groupId>
+            <artifactId>GriefPrevention</artifactId>
+            <version>16.18</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

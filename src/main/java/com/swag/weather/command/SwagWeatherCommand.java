@@ -1,6 +1,7 @@
 package com.swag.weather.command;
 
 import com.swag.weather.SwagWeather;
+import com.swag.weather.manager.ClaimWeatherManager;
 import com.swag.weather.model.ForecastEntry;
 import com.swag.weather.model.Intensity;
 import com.swag.weather.model.Season;
@@ -17,9 +18,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Admin command for SwagWeather: {@code /sweather <status|forecast|force|season|reload>}.
- * Permission {@code swagweather.admin} is enforced at the plugin.yml command level
- * (default op), matching the SwagTags/SwagRestartScheduler command idiom.
+ * Command for SwagWeather: {@code /sweather <status|forecast|force|season|reload|claim>}.
+ *
+ * <p>Unlike the SwagTags/SwagRestartScheduler idiom of a single {@code permission:}
+ * on the plugin.yml command entry, this command mixes admin-only subcommands with
+ * the player-facing {@code claim} subcommand, so plugin.yml declares no command-level
+ * permission and each admin subcommand instead checks {@code swagweather.admin}
+ * itself via {@link #requireAdmin(CommandSender)}. {@code claim} checks
+ * {@code swagweather.claim} (default true) plus GriefPrevention's own
+ * {@code Claim#allowEdit} check inside {@link ClaimWeatherManager}.</p>
  */
 public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
 
@@ -37,14 +44,21 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
         }
 
         switch (args[0].toLowerCase()) {
-            case "status" -> handleStatus(sender, args);
-            case "forecast" -> handleForecast(sender, args);
-            case "force" -> handleForce(sender, args);
-            case "season" -> handleSeason(sender, args);
-            case "reload" -> handleReload(sender);
+            case "status" -> { if (requireAdmin(sender)) handleStatus(sender, args); }
+            case "forecast" -> { if (requireAdmin(sender)) handleForecast(sender, args); }
+            case "force" -> { if (requireAdmin(sender)) handleForce(sender, args); }
+            case "season" -> { if (requireAdmin(sender)) handleSeason(sender, args); }
+            case "reload" -> { if (requireAdmin(sender)) handleReload(sender); }
+            case "claim" -> handleClaim(sender, args);
             default -> sendUsage(sender);
         }
         return true;
+    }
+
+    private boolean requireAdmin(CommandSender sender) {
+        if (sender.hasPermission("swagweather.admin")) return true;
+        sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "You don't have permission to do that.");
+        return false;
     }
 
     private void handleStatus(CommandSender sender, String[] args) {
@@ -139,7 +153,64 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
         plugin.reloadConfig();
         plugin.getWeatherManager().reload();
         plugin.getSeasonManager().reload();
+        plugin.getClaimWeatherManager().reload();
         sender.sendMessage(ChatColor.GREEN + plugin.getPrefix() + "Configuration reloaded.");
+    }
+
+    /**
+     * {@code /sweather claim <clear|rain|storm|reset>} — sets or clears a purely
+     * cosmetic per-player weather override for the GriefPrevention claim the
+     * sender is currently standing in. Available to any player with
+     * {@code swagweather.claim} (default true) whom GriefPrevention's own
+     * {@code Claim#allowEdit} permits (owner + trusted builders) — not gated by
+     * {@code swagweather.admin}.
+     */
+    private void handleClaim(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "Only players can use this command.");
+            return;
+        }
+        if (!sender.hasPermission("swagweather.claim")) {
+            sender.sendMessage(ChatColor.RED + plugin.getPrefix() + "You don't have permission to do that.");
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Usage: /sweather claim <clear|rain|storm|reset>");
+            return;
+        }
+
+        ClaimWeatherManager manager = plugin.getClaimWeatherManager();
+        String action = args[1].toLowerCase();
+        ClaimWeatherManager.Result result = switch (action) {
+            case "clear" -> manager.trySetOverride(player, ClaimWeatherManager.ClaimOverride.CLEAR);
+            case "rain", "storm" -> manager.trySetOverride(player, ClaimWeatherManager.ClaimOverride.DOWNFALL);
+            case "reset" -> manager.tryClearOverride(player);
+            default -> null;
+        };
+
+        if (result == null) {
+            sender.sendMessage(ChatColor.RED + "Usage: /sweather claim <clear|rain|storm|reset>");
+            return;
+        }
+
+        switch (result) {
+            case SUCCESS -> {
+                if (action.equals("reset")) {
+                    sender.sendMessage(ChatColor.GREEN + plugin.getPrefix()
+                            + "Your claim's weather override was reset — you'll now see the real world weather again.");
+                } else {
+                    sender.sendMessage(ChatColor.GREEN + plugin.getPrefix()
+                            + "Set this claim's weather override to " + action.toUpperCase()
+                            + ". This is purely visual for players in this claim — it doesn't change the server's real weather.");
+                }
+            }
+            case NOT_IN_CLAIM -> sender.sendMessage(ChatColor.RED + plugin.getPrefix()
+                    + "You must be standing inside a GriefPrevention claim to use this.");
+            case NO_PERMISSION -> sender.sendMessage(ChatColor.RED + plugin.getPrefix()
+                    + "You don't have edit permission in this claim.");
+            case DISABLED -> sender.sendMessage(ChatColor.RED + plugin.getPrefix()
+                    + "Claim weather overrides are unavailable (GriefPrevention not installed, or disabled in config).");
+        }
     }
 
     private World resolveWorld(CommandSender sender, String[] args, int index) {
@@ -168,15 +239,20 @@ public class SwagWeatherCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "  /sweather force <world> <intensity> [durationSeconds]");
         sender.sendMessage(ChatColor.YELLOW + "  /sweather season <world> <season>");
         sender.sendMessage(ChatColor.YELLOW + "  /sweather reload");
+        sender.sendMessage(ChatColor.YELLOW + "  /sweather claim <clear|rain|storm|reset>"
+                + ChatColor.GRAY + " — cosmetic-only, requires standing in a GriefPrevention claim you can edit");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return filter(List.of("status", "forecast", "force", "season", "reload"), args[0]);
+            return filter(List.of("status", "forecast", "force", "season", "reload", "claim"), args[0]);
         }
         if (args.length == 2 && List.of("status", "forecast", "force", "season").contains(args[0].toLowerCase())) {
             return filter(plugin.getServer().getWorlds().stream().map(World::getName).collect(Collectors.toList()), args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("claim")) {
+            return filter(List.of("clear", "rain", "storm", "reset"), args[1]);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("force")) {
             List<String> names = new ArrayList<>();

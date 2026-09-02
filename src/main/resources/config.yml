@@ -46,3 +46,16 @@ season:
 
 web:
   enabled: true
+
+# Purely cosmetic per-player weather override for players standing inside a
+# GriefPrevention claim (soft-dep — no effect if GriefPrevention isn't installed).
+# This NEVER changes real world weather and NEVER affects the "weather"/"season"
+# event-bus payloads that SwagFishing/SwagFarming read for bonuses — see
+# ClaimWeatherManager's class javadoc for why that's guaranteed.
+claim-weather:
+  enabled: true
+
+  # How often (in seconds) each online player's claim is re-checked to decide
+  # whether their visual weather override should change. Lower = more responsive
+  # to a player walking in/out of a claim, higher = less overhead.
+  poll-interval-seconds: 5
